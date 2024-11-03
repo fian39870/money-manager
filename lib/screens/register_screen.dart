@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/gestures.dart';
 import 'login_screen.dart';
+import 'component/bottom_bar.dart';
+import '../config/routes.dart';
 
 class SignUpPage extends StatefulWidget {
   const SignUpPage({Key? key}) : super(key: key);
@@ -385,21 +387,27 @@ class _SignUpPageState extends State<SignUpPage> {
             ),
           ),
           // Bottom Navigation Bar
-          Container(
-            decoration: BoxDecoration(
-              border: Border(top: BorderSide(color: Colors.grey[300]!)),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildNavItem(Icons.receipt_outlined, 'Transaksi', true),
-                _buildNavItem(Icons.bar_chart, 'Stats', false),
-                _buildNavItem(Icons.sync_alt, 'Accounts', false),
-                _buildNavItem(Icons.settings, 'Setting', false),
-              ],
-            ),
-          ),
         ],
+      ),
+      bottomNavigationBar: SharedBottomNavigation(
+        currentIndex: 3, // Transaction tab index
+        onTap: (index) {
+          switch (index) {
+            case 0: // Transaction
+              Navigator.pushReplacementNamed(context, Routes.transaction);
+              break;
+            case 1: // Transaction
+              Navigator.pushReplacementNamed(context, Routes.stats);
+              break;
+            case 2: // Transaction
+              Navigator.pushReplacementNamed(context, Routes.asset);
+              break;
+            case 3: // Settings
+              Navigator.pushReplacementNamed(context, Routes.setting);
+              break;
+            // Add other cases as needed
+          }
+        },
       ),
     );
   }

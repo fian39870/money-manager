@@ -35,14 +35,23 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
+    return Scaffold(
+      backgroundColor:
+          const Color(0xFFFF5252), // Warna merah yang sesuai dengan gambar
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Loading...'),
+            Container(
+              width: 100, // Sesuaikan ukuran sesuai kebutuhan
+              height: 100,
+              decoration: const BoxDecoration(
+                image: DecorationImage(
+                  image: AssetImage('assets/icon_pig.png'),
+                  fit: BoxFit.contain, // Warna ikon putih
+                ),
+              ),
+            ),
           ],
         ),
       ),

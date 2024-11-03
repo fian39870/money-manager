@@ -3,7 +3,12 @@ import 'package:intl/intl.dart';
 import 'calender_screen.dart';
 import 'expense_transaction_screen.dart';
 import 'setting_screen.dart';
+import 'stats_screen.dart';
+import '../models/transaction_model.dart';
+import 'component/bottom_bar.dart';
 import '../config/routes.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class TransactionScreen extends StatefulWidget {
   final DateTime? selectedDate;
@@ -17,13 +22,85 @@ class TransactionScreen extends StatefulWidget {
 class _TransactionScreenState extends State<TransactionScreen> {
   String _currentFilter = 'Daily';
   late DateTime _selectedDate;
-  double _income = 4831.89;
-  double _expenses = 2442.93;
+  double _income = 0;
+  double _expenses = 0;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  List<TransactionModel> _transactions = [];
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
     _selectedDate = widget.selectedDate ?? DateTime.now();
+    _loadTransactions();
+  }
+
+  Future<void> _loadTransactions() async {
+    if (_auth.currentUser == null) {
+      print('No user logged in');
+      return;
+    }
+    setState(() => _isLoading = true);
+
+    try {
+      final userId = _auth.currentUser!.uid;
+      print('Loading transactions for user: $userId');
+
+      // Get the start and end of the selected month
+      final startOfMonth = DateTime(_selectedDate.year, _selectedDate.month, 1);
+      final endOfMonth =
+          DateTime(_selectedDate.year, _selectedDate.month + 1, 0, 23, 59, 59);
+
+      print(
+          'Date range: ${startOfMonth.toString()} to ${endOfMonth.toString()}');
+
+      // Query transactions
+      final QuerySnapshot snapshot = await _firestore
+          .collection('transactions')
+          .where('userId', isEqualTo: userId)
+          .get(); // Temporarily remove date filters for testing
+
+      print('Raw query result: ${snapshot.docs.length} documents');
+
+      // Print the first document for debugging
+      if (snapshot.docs.isNotEmpty) {
+        print('First document data: ${snapshot.docs.first.data()}');
+      }
+
+      // Clear previous transactions
+      _transactions.clear();
+      _income = 0;
+      _expenses = 0;
+
+      // Process each document
+      for (var doc in snapshot.docs) {
+        try {
+          print('Processing document ${doc.id}');
+          print('Document data: ${doc.data()}');
+
+          final transaction = TransactionModel.fromFirestore(doc);
+          print(
+              'Successfully created transaction object: ${transaction.description}');
+
+          _transactions.add(transaction);
+
+          // Update totals
+          if (transaction.type == 'Income') {
+            _income += transaction.amount;
+          } else if (transaction.type == 'Expense') {
+            _expenses += transaction.amount;
+          }
+        } catch (e, stackTrace) {
+          print('Error processing document ${doc.id}: $e');
+          print('Stack trace: $stackTrace');
+        }
+      }
+
+      setState(() {});
+    } finally {
+      setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -60,7 +137,26 @@ class _TransactionScreenState extends State<TransactionScreen> {
           );
         },
       ),
-      bottomNavigationBar: _buildBottomNavBar(),
+      bottomNavigationBar: SharedBottomNavigation(
+        currentIndex: 0, // Transaction tab index
+        onTap: (index) {
+          switch (index) {
+            case 0: // Transaction
+              Navigator.pushReplacementNamed(context, Routes.transaction);
+              break;
+            case 1: // Transaction
+              Navigator.pushReplacementNamed(context, Routes.stats);
+              break;
+            case 2: // Transaction
+              Navigator.pushReplacementNamed(context, Routes.asset);
+              break;
+            case 3: // Settings
+              Navigator.pushReplacementNamed(context, Routes.setting);
+              break;
+            // Add other cases as needed
+          }
+        },
+      ),
     );
   }
 
@@ -136,74 +232,30 @@ class _TransactionScreenState extends State<TransactionScreen> {
   }
 
   Widget _buildTransactionList() {
-    return ListView(
-      children: const [
-        _TransactionItem(
-          date: "29",
-          day: "Wed",
-          category: "Social Life • Friend",
-          title: "brunch with daniel",
-          subtitle: "RBO Debit Card",
-          amount: "\$34.39",
-          isExpense: true,
-        ),
-        _TransactionItem(
-          date: "28",
-          day: "Tue",
-          category: "Household • Furniture",
-          title: "ikea wardrobe",
-          subtitle: "RBO Credit Card",
-          amount: "\$315.48",
-          isExpense: true,
-        ),
-        _TransactionItem(
-          date: "27",
-          day: "Mon",
-          category: "Transfer",
-          title: "minimum fees",
-          subtitle: "HIBD HIBD Travel",
-          amount: "\$80.00",
-          isExpense: false,
-        ),
-      ],
-    );
-  }
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
-  Widget _buildBottomNavBar() {
-    return BottomNavigationBar(
-      type: BottomNavigationBarType.fixed,
-      selectedItemColor: const Color(0xFFFF4D4D),
-      unselectedItemColor: Colors.grey,
-      currentIndex: 0,
-      onTap: (index) {
-        switch (index) {
-          case 0: // Index untuk Transaksi
-            Navigator.pushReplacementNamed(context, Routes.transaction);
-            break;
-          case 3: // Index untuk Setting
-            Navigator.pushReplacementNamed(context, Routes.setting);
-            break;
-          // Tambahkan case untuk navigasi lainnya jika diperlukan
-        }
+    if (_transactions.isEmpty) {
+      return const Center(
+        child: Text('No transactions found for this period'),
+      );
+    }
+
+    return ListView.builder(
+      itemCount: _transactions.length,
+      itemBuilder: (context, index) {
+        final transaction = _transactions[index];
+        return _TransactionItem(
+          date: DateFormat('dd').format(transaction.date),
+          day: DateFormat('E').format(transaction.date),
+          category: '${transaction.category} • ${transaction.account}',
+          title: transaction.description,
+          subtitle: transaction.note,
+          amount: '\$${transaction.amount.toStringAsFixed(2)}',
+          isExpense: transaction.type == 'Expense',
+        );
       },
-      items: const [
-        BottomNavigationBarItem(
-          icon: Icon(Icons.receipt_long),
-          label: 'Transaksi',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.bar_chart),
-          label: 'Stats',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.sync),
-          label: 'Accounts',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.settings),
-          label: 'Setting',
-        ),
-      ],
     );
   }
 
@@ -214,6 +266,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
         _selectedDate.month + months,
         _selectedDate.day,
       );
+      _loadTransactions(); // Reload transactions when month changes
     });
   }
 

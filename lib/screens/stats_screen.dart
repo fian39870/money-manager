@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'component/bottom_bar.dart';
+import '../config/routes.dart';
 
-class ExpenseTrackerPage extends StatelessWidget {
-  ExpenseTrackerPage({Key? key}) : super(key: key);
+class StatsPage extends StatelessWidget {
+  StatsPage({Key? key}) : super(key: key);
 
   final List<ExpenseItem> expenses = [
     ExpenseItem('Apparel', 1046.76, 0.428, Colors.pink),
@@ -26,7 +28,7 @@ class ExpenseTrackerPage extends StatelessWidget {
           onPressed: () {},
         ),
         title: Text(
-          'Jul2020',
+          'Jul 2020',
           style: TextStyle(color: Colors.black),
         ),
         actions: [
@@ -45,11 +47,11 @@ class ExpenseTrackerPage extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Income \$4,831.89',
+                  'Pemasukan \$4,831.89',
                   style: TextStyle(color: Colors.grey[600]),
                 ),
                 Text(
-                  'Expenses \$2,442.93',
+                  'Pengeluaran \$2,442.93',
                   style: TextStyle(color: Colors.grey[600]),
                 ),
               ],
@@ -126,29 +128,27 @@ class ExpenseTrackerPage extends StatelessWidget {
           ),
 
           // Bottom Navigation Bar
-          BottomNavigationBar(
-            currentIndex: 1,
-            type: BottomNavigationBarType.fixed,
-            items: [
-              BottomNavigationBarItem(
-                icon: Icon(Icons.receipt_long),
-                label: 'Transaksi',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.bar_chart),
-                label: 'Stats',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.sync),
-                label: 'Accounts',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.settings),
-                label: 'Account',
-              ),
-            ],
-          ),
         ],
+      ),
+      bottomNavigationBar: SharedBottomNavigation(
+        currentIndex: 1, // Transaction tab index
+        onTap: (index) {
+          switch (index) {
+            case 0: // Transaction
+              Navigator.pushReplacementNamed(context, Routes.transaction);
+              break;
+            case 1: // Transaction
+              Navigator.pushReplacementNamed(context, Routes.stats);
+              break;
+            case 2: // Transaction
+              Navigator.pushReplacementNamed(context, Routes.asset);
+              break;
+            case 3: // Settings
+              Navigator.pushReplacementNamed(context, Routes.setting);
+              break;
+            // Add other cases as needed
+          }
+        },
       ),
     );
   }

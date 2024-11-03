@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'component/bottom_bar.dart';
+import '../config/routes.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({Key? key}) : super(key: key);
@@ -380,6 +382,26 @@ class _LoginPageState extends State<LoginPage> {
             ),
           ],
         ),
+      ),
+      bottomNavigationBar: SharedBottomNavigation(
+        currentIndex: 3, // Transaction tab index
+        onTap: (index) {
+          switch (index) {
+            case 0: // Transaction
+              Navigator.pushReplacementNamed(context, Routes.transaction);
+              break;
+            case 1: // Transaction
+              Navigator.pushReplacementNamed(context, Routes.stats);
+              break;
+            case 2: // Transaction
+              Navigator.pushReplacementNamed(context, Routes.asset);
+              break;
+            case 3: // Settings
+              Navigator.pushReplacementNamed(context, Routes.setting);
+              break;
+            // Add other cases as needed
+          }
+        },
       ),
     );
   }

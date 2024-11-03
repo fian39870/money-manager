@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'component/bottom_bar.dart';
+import '../config/routes.dart';
 
 class TransactionCalendarView extends StatelessWidget {
   final double income;
@@ -85,33 +87,23 @@ class TransactionCalendarView extends StatelessWidget {
           ),
         ],
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: Colors.orange,
-        unselectedItemColor: Colors.grey,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.receipt_outlined),
-            label: 'Transact',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.bar_chart),
-            label: 'Stats',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.sync),
-            label: 'Accounts',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings),
-            label: 'Account',
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: Colors.red,
-        child: const Icon(Icons.add),
-        onPressed: () {},
+      bottomNavigationBar: SharedBottomNavigation(
+        currentIndex: 0, // Transaction tab index
+        onTap: (index) {
+          switch (index) {
+            case 0: // Transaction
+              Navigator.pushReplacementNamed(context, Routes.transaction);
+              break;
+            case 1: // Transaction
+              Navigator.pushReplacementNamed(context, Routes.stats);
+              break;
+
+            case 3: // Settings
+              Navigator.pushReplacementNamed(context, Routes.setting);
+              break;
+            // Add other cases as needed
+          }
+        },
       ),
     );
   }
