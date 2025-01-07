@@ -141,11 +141,11 @@ class _StatsPageState extends State<StatsPage> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Pemasukan \$${_totalIncome.toStringAsFixed(2)}',
+                        'Pemasukan \Rp.${_totalIncome.toStringAsFixed(2)}',
                         style: TextStyle(color: Colors.grey[600]),
                       ),
                       Text(
-                        'Pengeluaran \$${_totalExpense.toStringAsFixed(2)}',
+                        'Pengeluaran \Rp.${_totalExpense.toStringAsFixed(2)}',
                         style: TextStyle(color: Colors.grey[600]),
                       ),
                     ],
@@ -217,7 +217,7 @@ class _StatsPageState extends State<StatsPage> {
                               ),
                             ),
                             Text(
-                              '\$${expense.amount.toStringAsFixed(2)}',
+                              '\Rp.${expense.amount.toStringAsFixed(2)}',
                               style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
