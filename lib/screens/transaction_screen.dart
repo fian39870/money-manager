@@ -211,17 +211,17 @@ class _TransactionScreenState extends State<TransactionScreen> {
             children: [
               _SummaryItem(
                 label: 'Income',
-                amount: '\$ ${_income.toStringAsFixed(2)}',
+                amount: '\Rp. ${_income.toStringAsFixed(2)}',
                 color: Colors.blue,
               ),
               _SummaryItem(
                 label: 'Expenses',
-                amount: '\$ ${_expenses.toStringAsFixed(2)}',
+                amount: '\Rp. ${_expenses.toStringAsFixed(2)}',
                 color: Colors.red,
               ),
               _SummaryItem(
                 label: 'Total',
-                amount: '\$ ${(_income - _expenses).toStringAsFixed(2)}',
+                amount: '\Rp. ${(_income - _expenses).toStringAsFixed(2)}',
                 color: Colors.black,
               ),
             ],
@@ -252,7 +252,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
           category: '${transaction.category} • ${transaction.account}',
           title: transaction.description,
           subtitle: transaction.note,
-          amount: '\$${transaction.amount.toStringAsFixed(2)}',
+          amount: '\Rp.${transaction.amount.toStringAsFixed(2)}',
           isExpense: transaction.type == 'Expense',
         );
       },
@@ -465,7 +465,7 @@ class _TransactionItem extends StatelessWidget {
             amount,
             style: TextStyle(
               fontSize: 16,
-              color: isExpense ? Colors.red : Colors.grey,
+              color: isExpense ? Colors.orange : Colors.blue,
             ),
           ),
         ],

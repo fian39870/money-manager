@@ -5,20 +5,16 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
-import 'income_transaction_screen.dart';
+import 'package:myapp/screens/expense_transaction_screen.dart';
 
-class ExpenseTransactionPage extends StatefulWidget {
-  final DateTime? selectedDate;
-  const ExpenseTransactionPage({
-    Key? key, 
-    this.selectedDate,
-  }) : super(key: key);
+class IncomeTransactionPage extends StatefulWidget {
+  const IncomeTransactionPage({Key? key}) : super(key: key);
 
   @override
-  State<ExpenseTransactionPage> createState() => _ExpenseTransactionPageState();
+  State<IncomeTransactionPage> createState() => _IncomeTransactionPageState();
 }
 
-class _ExpenseTransactionPageState extends State<ExpenseTransactionPage> {
+class _IncomeTransactionPageState extends State<IncomeTransactionPage> {
   final TextEditingController _dateController = TextEditingController();
   final TextEditingController _accountController = TextEditingController();
   final TextEditingController _categoryController = TextEditingController();
@@ -30,7 +26,7 @@ class _ExpenseTransactionPageState extends State<ExpenseTransactionPage> {
   final FirebaseStorage _storage = FirebaseStorage.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  String _selectedType = 'Pengeluaran';
+  String _selectedType = 'Income'; // Default to Income
   List<XFile> _images = [];
   final ImagePicker _picker = ImagePicker();
   bool _isLoading = false;
@@ -47,7 +43,6 @@ class _ExpenseTransactionPageState extends State<ExpenseTransactionPage> {
   @override
   void initState() {
     super.initState();
-    // Set default date to today
     _dateController.text = DateFormat('yyyy-MM-dd').format(DateTime.now());
   }
 
@@ -73,17 +68,14 @@ class _ExpenseTransactionPageState extends State<ExpenseTransactionPage> {
 
   Future<List<String>> _uploadImages() async {
     List<String> imageUrls = [];
-
     for (var image in _images) {
       String fileName =
           '${DateTime.now().millisecondsSinceEpoch}_${image.name}';
       Reference ref = _storage.ref().child('transaction_images/$fileName');
-
       await ref.putFile(File(image.path));
       String downloadUrl = await ref.getDownloadURL();
       imageUrls.add(downloadUrl);
     }
-
     return imageUrls;
   }
 
@@ -98,14 +90,10 @@ class _ExpenseTransactionPageState extends State<ExpenseTransactionPage> {
     setState(() => _isLoading = true);
 
     try {
-      // Upload images first if any
       List<String> imageUrls = await _uploadImages();
-
-      // Get current user
       final user = _auth.currentUser;
       if (user == null) throw Exception('No user logged in');
 
-      // Create transaction data
       final transactionData = {
         'userId': user.uid,
         'type': _selectedType,
@@ -120,7 +108,6 @@ class _ExpenseTransactionPageState extends State<ExpenseTransactionPage> {
         'createdAt': FieldValue.serverTimestamp(),
       };
 
-      // Save to Firestore
       await _firestore.collection('transactions').add(transactionData);
 
       // Update user's total balance
@@ -133,20 +120,15 @@ class _ExpenseTransactionPageState extends State<ExpenseTransactionPage> {
 
         double amount = double.parse(_amountController.text);
         double currentBalance = userDoc.data()?['balance'] ?? 0.0;
-        double newBalance = currentBalance;
-
-        if (_selectedType == 'Income') {
-          newBalance += amount;
-        } else if (_selectedType == 'Expense') {
-          newBalance -= amount;
-        }
+        double newBalance = currentBalance + amount; // Add for income
 
         transaction.update(userRef, {'balance': newBalance});
       });
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Transaction saved successfully')),
+          const SnackBar(
+              content: Text('Income transaction saved successfully')),
         );
         Navigator.pop(context);
       }
@@ -171,7 +153,7 @@ class _ExpenseTransactionPageState extends State<ExpenseTransactionPage> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text('Expense'),
+        title: const Text('Income'),
         actions: [
           TextButton(
             onPressed: _isLoading ? null : _saveTransaction,
@@ -181,7 +163,9 @@ class _ExpenseTransactionPageState extends State<ExpenseTransactionPage> {
                     height: 20,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Text('Save', style: TextStyle(color: Colors.blue)),
+                : const Text('Save',
+                    style: TextStyle(
+                        color: Colors.green)), // Changed to green for income
           ),
         ],
         elevation: 0,
@@ -192,7 +176,6 @@ class _ExpenseTransactionPageState extends State<ExpenseTransactionPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Transaction Type Selector
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
@@ -202,26 +185,20 @@ class _ExpenseTransactionPageState extends State<ExpenseTransactionPage> {
                 ],
               ),
               const SizedBox(height: 24),
-
               // Form Fields
-              _buildFormField('Tanggal', _dateController,
+              _buildFormField('Date', _dateController,
                   trailing: IconButton(
-                    icon: const Icon(Icons.repeat, color: Colors.blue),
-                    onPressed: () {},
+                    icon: const Icon(Icons.calendar_today, color: Colors.green),
+                    onPressed: _selectDate,
                   )),
-              _buildFormField('Aset', _accountController),
-              _buildFormField('Kategori', _categoryController),
-              _buildFormField('Jumlah', _amountController),
-              _buildFormField('Catatan', _noteController,
-                  trailing: IconButton(
-                    icon:
-                        const Icon(Icons.note_add_outlined, color: Colors.blue),
-                    onPressed: () {},
-                  )),
-              _buildFormField('Deskripsi', _descriptionController,
+              _buildFormField('Asset', _accountController),
+              _buildFormField('Category', _categoryController),
+              _buildFormField('Amount', _amountController),
+              _buildFormField('Note', _noteController),
+              _buildFormField('Description', _descriptionController,
                   trailing: IconButton(
                     icon: const Icon(Icons.camera_alt_outlined,
-                        color: Colors.blue),
+                        color: Colors.green),
                     onPressed: _pickImage,
                   )),
 
@@ -259,11 +236,8 @@ class _ExpenseTransactionPageState extends State<ExpenseTransactionPage> {
                                   color: Colors.black.withOpacity(0.5),
                                   shape: BoxShape.circle,
                                 ),
-                                child: const Icon(
-                                  Icons.close,
-                                  color: Colors.white,
-                                  size: 16,
-                                ),
+                                child: const Icon(Icons.close,
+                                    color: Colors.white, size: 16),
                               ),
                             ),
                           ),
@@ -282,6 +256,7 @@ class _ExpenseTransactionPageState extends State<ExpenseTransactionPage> {
                       icon: Icons.delete_outline,
                       label: 'Delete',
                       onPressed: () {},
+                      color: Colors.green,
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -290,6 +265,7 @@ class _ExpenseTransactionPageState extends State<ExpenseTransactionPage> {
                       icon: Icons.copy,
                       label: 'Copy',
                       onPressed: () {},
+                      color: Colors.green,
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -298,6 +274,7 @@ class _ExpenseTransactionPageState extends State<ExpenseTransactionPage> {
                       icon: Icons.bookmark_border,
                       label: 'Bookmark',
                       onPressed: () {},
+                      color: Colors.green,
                     ),
                   ),
                 ],
@@ -314,13 +291,12 @@ class _ExpenseTransactionPageState extends State<ExpenseTransactionPage> {
     return InkWell(
       onTap: () {
         if (type != _selectedType) {
-          // Navigate to appropriate screen based on type
           switch (type) {
-            case 'Income':
+            case 'Expense':
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => const IncomeTransactionPage(),
+                  builder: (context) => const ExpenseTransactionPage(),
                 ),
               );
               break;
@@ -394,12 +370,13 @@ class _ExpenseTransactionPageState extends State<ExpenseTransactionPage> {
     required IconData icon,
     required String label,
     required VoidCallback onPressed,
+    Color color = Colors.grey,
   }) {
     return OutlinedButton(
       onPressed: onPressed,
       style: OutlinedButton.styleFrom(
         padding: const EdgeInsets.symmetric(vertical: 12),
-        side: const BorderSide(color: Colors.grey),
+        side: BorderSide(color: color),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8),
         ),
@@ -407,9 +384,9 @@ class _ExpenseTransactionPageState extends State<ExpenseTransactionPage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 20),
+          Icon(icon, size: 20, color: color),
           const SizedBox(width: 8),
-          Text(label),
+          Text(label, style: TextStyle(color: color)),
         ],
       ),
     );

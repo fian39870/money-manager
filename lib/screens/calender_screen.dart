@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'component/bottom_bar.dart';
 import '../config/routes.dart';
+import 'expense_transaction_screen.dart';
 
 class TransactionCalendarView extends StatelessWidget {
   final double income;
@@ -14,6 +15,52 @@ class TransactionCalendarView extends StatelessWidget {
     required this.expenses,
     required this.selectedDate,
   }) : super(key: key);
+  Widget _buildCalendarCell(BuildContext context, int index) {
+    // Tambahkan parameter context
+    final date = DateTime(selectedDate.year, selectedDate.month, index + 1);
+
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ExpenseTransactionPage(
+              selectedDate: date,
+            ),
+          ),
+        );
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.grey.shade300),
+          color: _isToday(date) ? Colors.blue.withOpacity(0.1) : null,
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              (index + 1).toString(),
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight:
+                    _isToday(date) ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+            if (_hasTransactions(date))
+              Container(
+                width: 4,
+                height: 4,
+                margin: const EdgeInsets.only(top: 2),
+                decoration: const BoxDecoration(
+                  color: Colors.blue,
+                  shape: BoxShape.circle,
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -79,9 +126,11 @@ class TransactionCalendarView extends StatelessWidget {
                 crossAxisCount: 7,
                 childAspectRatio: 1,
               ),
-              itemCount: 42, // 6 weeks * 7 days
+              itemCount:
+                  DateTime(selectedDate.year, selectedDate.month + 1, 0).day,
               itemBuilder: (context, index) {
-                return _buildCalendarCell(index);
+                return _buildCalendarCell(
+                    context, index); // Passing context ke method
               },
             ),
           ),
@@ -144,19 +193,16 @@ class TransactionCalendarView extends StatelessWidget {
     );
   }
 
-  Widget _buildCalendarCell(int index) {
-    return Container(
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey.shade300),
-      ),
-      child: Center(
-        child: Text(
-          (index + 1).toString(),
-          style: const TextStyle(
-            fontSize: 14,
-          ),
-        ),
-      ),
-    );
+// Helper method untuk mengecek apakah tanggal yang dipilih adalah hari ini
+  bool _isToday(DateTime date) {
+    final now = DateTime.now();
+    return date.year == now.year &&
+        date.month == now.month &&
+        date.day == now.day;
+  }
+
+  bool _hasTransactions(DateTime date) {
+    // Implementasi logika untuk mengecek apakah ada transaksi
+    return false;
   }
 }

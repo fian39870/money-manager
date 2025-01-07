@@ -1,9 +1,101 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'component/bottom_bar.dart';
 import '../config/routes.dart';
 
-class AssetScreen extends StatelessWidget {
+class AssetScreen extends StatefulWidget {
   const AssetScreen({Key? key}) : super(key: key);
+
+  @override
+  State<AssetScreen> createState() => _AssetScreenState();
+}
+
+class _AssetScreenState extends State<AssetScreen> {
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  bool _isLoading = true;
+
+  // Data containers
+  double _totalAssets = 0;
+  double _totalLiabilities = 0;
+  List<Asset> _cashAssets = [];
+  List<Asset> _bankAssets = [];
+  List<CardAsset> _cardAssets = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAssetData();
+  }
+
+  Future<void> _loadAssetData() async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) return;
+
+      // Fetch assets from Firestore
+      final QuerySnapshot assetSnapshot = await _firestore
+          .collection('assets')
+          .where('userId', isEqualTo: user.uid)
+          .get();
+
+      List<Asset> cashAssets = [];
+      List<Asset> bankAssets = [];
+      List<CardAsset> cardAssets = [];
+      double totalAssets = 0;
+      double totalLiabilities = 0;
+
+      for (var doc in assetSnapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        final type = data['type'] as String;
+        final amount = (data['amount'] as num).toDouble();
+        final title = data['title'] as String;
+        final mustPay = (data['mustPay'] as num?)?.toDouble() ?? 0;
+        final unpaid = (data['unpaid'] as num?)?.toDouble() ?? 0;
+
+        final asset = Asset(title: title, amount: amount);
+        final cardAsset = CardAsset(
+          title: title,
+          mustPay: mustPay,
+          unpaid: unpaid,
+        );
+
+        switch (type.toLowerCase()) {
+          case 'cash':
+            cashAssets.add(asset);
+            totalAssets += amount;
+            break;
+          case 'bank':
+            bankAssets.add(asset);
+            totalAssets += amount;
+            break;
+          case 'card':
+            cardAssets.add(cardAsset);
+            if (mustPay < 0) {
+              totalLiabilities += mustPay.abs();
+            }
+            break;
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _cashAssets = cashAssets;
+          _bankAssets = bankAssets;
+          _cardAssets = cardAssets;
+          _totalAssets = totalAssets;
+          _totalLiabilities = totalLiabilities;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('Error loading asset data: $e');
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,33 +125,38 @@ class AssetScreen extends StatelessWidget {
           ],
         ),
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            _buildSummaryCard(),
-            _buildCashSection(),
-            _buildBankSection(),
-            _buildCardSection(),
-          ],
-        ),
-      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : RefreshIndicator(
+              onRefresh: _loadAssetData,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: Column(
+                  children: [
+                    _buildSummaryCard(),
+                    if (_cashAssets.isNotEmpty) _buildCashSection(),
+                    if (_bankAssets.isNotEmpty) _buildBankSection(),
+                    if (_cardAssets.isNotEmpty) _buildCardSection(),
+                  ],
+                ),
+              ),
+            ),
       bottomNavigationBar: SharedBottomNavigation(
-        currentIndex: 2, // Transaction tab index
+        currentIndex: 2,
         onTap: (index) {
           switch (index) {
-            case 0: // Transaction
+            case 0:
               Navigator.pushReplacementNamed(context, Routes.transaction);
               break;
-            case 1: // Transaction
+            case 1:
               Navigator.pushReplacementNamed(context, Routes.stats);
               break;
-            case 2: // Transaction
+            case 2:
               Navigator.pushReplacementNamed(context, Routes.asset);
               break;
-            case 3: // Settings
+            case 3:
               Navigator.pushReplacementNamed(context, Routes.setting);
               break;
-            // Add other cases as needed
           }
         },
       ),
@@ -67,14 +164,18 @@ class AssetScreen extends StatelessWidget {
   }
 
   Widget _buildSummaryCard() {
+    final total = _totalAssets - _totalLiabilities;
     return Container(
       padding: const EdgeInsets.all(16),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          _buildSummaryItem('Aset', '\$ 6,628.12', Colors.black),
-          _buildSummaryItem('Liabilitas', '\$ 208,242.65', Colors.red),
-          _buildSummaryItem('Total', '\$-201,614.53', Colors.black),
+          _buildSummaryItem(
+              'Aset', '\$ ${_totalAssets.toStringAsFixed(2)}', Colors.black),
+          _buildSummaryItem('Liabilitas',
+              '\$ ${_totalLiabilities.toStringAsFixed(2)}', Colors.red),
+          _buildSummaryItem('Total', '\$ ${total.toStringAsFixed(2)}',
+              total < 0 ? Colors.red : Colors.black),
         ],
       ),
     );
@@ -118,7 +219,8 @@ class AssetScreen extends StatelessWidget {
             ),
           ),
         ),
-        _buildListItem('Tunai', '\$68.45'),
+        ..._cashAssets.map((asset) => _buildListItem(
+            asset.title, '\$${asset.amount.toStringAsFixed(2)}')),
       ],
     );
   }
@@ -137,8 +239,8 @@ class AssetScreen extends StatelessWidget {
             ),
           ),
         ),
-        _buildListItem('Bank', '\$2,768.66'),
-        _buildListItem('Bank', '\$1,155.05'),
+        ..._bankAssets.map((asset) => _buildListItem(
+            asset.title, '\$${asset.amount.toStringAsFixed(2)}')),
       ],
     );
   }
@@ -167,12 +269,11 @@ class AssetScreen extends StatelessWidget {
             ],
           ),
         ),
-        _buildCardItem('Bank', '\$2,192.65', '\$0.00'),
-        _buildCardItem('HIBD Travel', '\$-1,076.39', '\$0.00'),
-        _buildCardItem('RBO Credit Card', '\$-1,116.26', '\$0.00'),
-        _buildCardItem('Karu Debit', '', '\$0.00'),
-        _buildCardItem('HIBD Debit Card', '', '\$0.00'),
-        _buildCardItem('RBO Debit Card', '', '\$0.00'),
+        ..._cardAssets.map((card) => _buildCardItem(
+              card.title,
+              card.mustPay != 0 ? '\$${card.mustPay.toStringAsFixed(2)}' : '',
+              '\$${card.unpaid.toStringAsFixed(2)}',
+            )),
       ],
     );
   }
@@ -196,7 +297,7 @@ class AssetScreen extends StatelessWidget {
             amount,
             style: TextStyle(
               fontSize: 16,
-              color: amount.startsWith('-') ? Colors.red : Colors.blue,
+              color: amount.contains('-') ? Colors.red : Colors.blue,
             ),
           ),
         ],
@@ -228,7 +329,7 @@ class AssetScreen extends StatelessWidget {
               textAlign: TextAlign.right,
               style: TextStyle(
                 fontSize: 16,
-                color: mustPay.startsWith('-') ? Colors.red : Colors.blue,
+                color: mustPay.contains('-') ? Colors.red : Colors.blue,
               ),
             ),
           ),
@@ -246,4 +347,23 @@ class AssetScreen extends StatelessWidget {
       ),
     );
   }
+}
+
+class Asset {
+  final String title;
+  final double amount;
+
+  Asset({required this.title, required this.amount});
+}
+
+class CardAsset {
+  final String title;
+  final double mustPay;
+  final double unpaid;
+
+  CardAsset({
+    required this.title,
+    required this.mustPay,
+    required this.unpaid,
+  });
 }
